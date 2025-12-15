@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2 class="mb-4">🧑‍⚖️ Administración de Usuarios Vecinos</h2>
+
+{# Aplicando estilos básicos de Bootstrap a la tabla para mejorar la presentación #}
+{% if vecinos %}
+    <table class="table table-striped table-hover table-sm">
+        <thead class="table-dark">
+            <tr>
+                {% for col in columnas %}
+                    <th>{{ col.replace('_', ' ').title() }}</th>
+                {% endfor %}
+                <th style="width: 300px;">Acciones</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for vecino in vecinos %}
+                <tr>
+                    {% for dato in vecino %}
+                        <td>{{ dato }}</td>
+                    {% endfor %}
+
+                    {% set id_vecino = vecino[0] %}
+                    {% set estado = vecino[3] %}
+
+                    <td>
+                        <div class="d-flex gap-1">
+                        {# --- APROBAR --- #}
+                        {% if estado in ['pendiente', 'rechazado', 'bloqueado'] %}
+                            <a href="{{ url_for('update_neighbor', id_vecino=id_vecino, estado='aprobado') }}"
+                               class="btn btn-success btn-sm">
+                                ✅ Aprobar
+                            </a>
+                        {% endif %}
+
+                        {# --- BLOQUEAR --- #}
+                        {% if estado not in ['bloqueado', 'pendiente'] %}
+                            <a href="{{ url_for('update_neighbor', id_vecino=id_vecino, estado='bloqueado') }}"
+                               class="btn btn-warning btn-sm">
+                                ⛔ Bloquear
+                            </a>
+                        {% endif %}
+
+                        {# --- RECHAZAR --- #}
+                        {% if estado != 'rechazado' %}
+                            <a href="{{ url_for('update_neighbor', id_vecino=id_vecino, estado='rechazado') }}"
+                               class="btn btn-warning btn-sm">
+                                ❌ Rechazar
+                            </a>
+                        {% endif %}
+
+                        {# --- ELIMINAR --- #}
+                        <a href="{{ url_for('delete_neighbor', id_vecino=id_vecino) }}"
+                           class="btn btn-danger btn-sm"
+                           onclick="return confirm('¿Está seguro de eliminar a este vecino y TODAS sus publicaciones?')">
+                            🗑️ Eliminar
+                        </a>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+{% else %}
+    <div class="alert alert-info" role="alert">
+        No hay vecinos registrados para administrar.
+    </div>
+{% endif %}
+
+<p class="mt-4">
+    <a href="{{ url_for('admin_menu') }}" class="btn btn-secondary">Volver al Menú Admin</a>
+</p>
+
+{% endblock %}

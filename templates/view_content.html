@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <h2 class="mb-4 text-primary">🔍 {{ titulo }}</h2>
+
+    {% if tipo == 'oferta' %}
+        {# CORRECCIÓN 1: Eliminado 'publications.' #}
+        <form method="POST" action="{{ url_for('view_content', tipo='oferta') }}" class="mb-4 p-3 border rounded bg-light d-flex gap-2 align-items-center">
+            <label for="busqueda" class="form-label mb-0">Buscar por Palabra Clave:</label>
+            <input type="text" id="busqueda" name="busqueda" class="form-control" placeholder="Ej: Plomero, clases de guitarra">
+            <button type="submit" class="btn btn-primary">Buscar</button>
+            {# CORRECCIÓN 2: Eliminado 'publications.' #}
+            <a href="{{ url_for('view_content', tipo='oferta') }}" class="btn btn-secondary">Limpiar</a>
+        </form>
+    {% endif %}
+
+    {% if resultados %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover table-sm">
+                <thead class="table-dark">
+                    <tr>
+                        {% for col in columnas %}
+                            <th>{{ col.replace('_', ' ').title() }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for fila in resultados %}
+                        <tr>
+                            {% for dato in fila %}
+                                <td>{{ dato }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    {% else %}
+        <div class="alert alert-info" role="alert">
+            No se encontraron publicaciones de **{{ tipo }}** aprobadas.
+        </div>
+    {% endif %}
+
+    <p class="mt-4">
+        {# CORRECCIÓN 3: Eliminado 'user.' #}
+        <a href="{{ url_for('user_menu') }}" class="btn btn-secondary">Volver al Menú</a>
+    </p>
+</div>
+{% endblock %}

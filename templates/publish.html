@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5" style="max-width: 600px;">
+    
+    <h2 class="mb-4 text-center">✍️ Publicar {{ tipo.capitalize() }}</h2>
+
+    {# CORRECCIÓN 1: Eliminado 'publications.' #}
+    <form method="POST" action="{{ url_for('publish', tipo=tipo) }}" class="border p-4 rounded shadow-sm bg-light">
+
+        {% for key, label in campos %}
+            
+            <div class="mb-3">
+                <label for="{{ key }}" class="form-label">{{ label }}:</label>
+
+                {% if 'descripcion' in key or 'contenido' in key %}
+                    <textarea id="{{ key }}" name="{{ key }}" class="form-control" rows="4" required></textarea>
+                {% else %}
+                    <input type="text" id="{{ key }}" name="{{ key }}" class="form-control" 
+                            {% if 'costo' not in key %}required{% endif %}>
+                {% endif %}
+            </div>
+
+        {% endfor %}
+
+        <button type="submit" class="btn btn-primary w-100 mt-3">Guardar Publicación</button>
+    </form>
+
+    <p class="mt-3 text-center">
+        {# CORRECCIÓN 2: Eliminado 'user.' #}
+        <a href="{{ url_for('user_menu') }}" class="btn btn-secondary mt-2">Volver al Menú</a>
+    </p>
+
+</div>
+{% endblock %}

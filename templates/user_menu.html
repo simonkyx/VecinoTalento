@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <h2 class="text-primary">🏡 Menú Principal - Vecino</h2>
+
+    <p class="mb-4">Hola, <strong>{{ user.nombre }}</strong> (ID: {{ user.id }}) | Rol: <strong>{{ user.rol }}</strong></p>
+
+    {% if user.estado != 'aprobado' %}
+        <div class="alert alert-warning" role="alert">
+            🚨 Tu cuenta está en estado: <strong>{{ user.estado | upper }}</strong>. No podrás publicar contenido hasta que seas aprobado por el administrador.
+        </div>
+    {% endif %}
+
+    <hr>
+
+    <h3>1. Publicar Contenido</h3>
+
+    {% set disabled = 'disabled' if user.estado != 'aprobado' else '' %}
+    {% set disabled_class = 'disabled' if user.estado != 'aprobado' else '' %}
+
+    <div class="d-flex flex-wrap gap-2 mb-4">
+        {# CORRECCIÓN: Eliminado 'publications.' #}
+        <a href="{{ url_for('publish', tipo='oferta') }}" 
+            class="btn btn-primary {{ disabled_class }}">
+            1. 💼 Publicar Oficio/Servicio
+        </a>
+
+        {# CORRECCIÓN: Eliminado 'publications.' #}
+        <a href="{{ url_for('publish', tipo='emprendimiento') }}" 
+            class="btn btn-primary {{ disabled_class }}">
+            2. 🛒 Publicar Emprendimiento
+        </a>
+
+        {# CORRECCIÓN: Eliminado 'publications.' #}
+        <a href="{{ url_for('publish', tipo='aviso') }}" 
+            class="btn btn-primary {{ disabled_class }}">
+            3. 📢 Publicar Aviso Comunitario
+        </a>
+    </div>
+
+    <hr>
+
+    <h3>2. Ver y Buscar Contenido (Solo publicaciones aprobadas)</h3>
+
+    <div class="d-flex flex-wrap gap-2 mb-4">
+        {# CORRECCIÓN: Eliminado 'publications.' #}
+        <a href="{{ url_for('view_content', tipo='oferta') }}" class="btn btn-success">
+            4. 🔍 Ver/Buscar Ofertas de Servicio
+        </a>
+
+        {# CORRECCIÓN: Eliminado 'publications.' #}
+        <a href="{{ url_for('view_content', tipo='emprendimiento') }}" class="btn btn-success">
+            5. 🏘️ Ver Emprendimientos
+        </a>
+
+        {# CORRECCIÓN: Eliminado 'publications.' #}
+        <a href="{{ url_for('view_content', tipo='aviso') }}" class="btn btn-success">
+            6. 📣 Ver Avisos Comunitarios
+        </a>
+    </div>
+
+</div>
+{% endblock %}

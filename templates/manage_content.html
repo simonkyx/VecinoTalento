@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">{{ titulo }}</h2>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}" role="alert">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <table class="table table-striped table-bordered">
+        <thead class="thead-dark">
+            <tr>
+                {% for columna in columnas %}
+                    <th scope="col">{{ columna.replace('_', ' ') }}</th>
+                {% endfor %}
+                <th scope="col">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for fila in resultados %}
+                <tr>
+                    {% set id_publicacion = fila[0] %}
+                    {% for dato in fila %}
+                        <td>{{ dato }}</td>
+                    {% endfor %}
+                    <td>
+                        <a href="{{ url_for('delete_content_action', tipo=tipo, id_publicacion=id_publicacion) }}" 
+                           class="btn btn-danger btn-sm" 
+                           onclick="return confirm('¿Estás seguro de que quieres eliminar esta publicación (ID: {{ id_publicacion }})? Esta acción es irreversible.');">
+                            Eliminar
+                        </a>
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="{{ columnas|length + 1 }}" class="text-center">No hay publicaciones de este tipo para gestionar.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="{{ url_for('admin_menu') }}" class="btn btn-secondary mt-3">Volver al Menú Admin</a>
+</div>
+{% endblock %}
