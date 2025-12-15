@@ -9,7 +9,6 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 # =========================================================
 
 app = Flask(__name__)
-# Es crucial tener una clave secreta fuerte para la seguridad de la sesión
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "CLAVE_DE_FALLO_GENERADA_POR_CODIGO")
 
 
@@ -20,11 +19,9 @@ app.secret_key = os.environ.get("FLASK_SECRET_KEY", "CLAVE_DE_FALLO_GENERADA_POR
 def conectar_db():
     try:
         # Render expone la URL de la base de datos interna en esta variable
-        # Esto reemplaza todas las variables de Oracle (USER, PASS, DSN)
         DATABASE_URL = os.environ.get("DATABASE_URL")
         
         if not DATABASE_URL:
-            # En un entorno local, podrías poner una URL aquí para pruebas
             print("Error: La variable DATABASE_URL no está configurada en Render.")
             return None
         
@@ -57,11 +54,11 @@ def ejecutar_login_db(email, password):
         cursor = conn.cursor()
         hashed = hash_password(password)
 
-        # Usando %s como placeholder para PostgreSQL
+        # ⬅️ CAMBIO: Nombre de tabla a minúsculas
         sql = """
-        SELECT ID_VECINO, NOMBRE, EMAIL, ESTADO_APROBACION, ROL 
-        FROM VECINOS 
-        WHERE EMAIL = %s AND PASSWORD_HASH = %s
+        SELECT id_vecino, nombre, email, estado_aprobacion, rol 
+        FROM vecinos 
+        WHERE email = %s AND password_hash = %s
         """
         cursor.execute(sql, (email, hashed))
         data = cursor.fetchone()
@@ -99,14 +96,14 @@ def ejecutar_registro_db(nombre, email, telefono, password):
         cursor = conn.cursor()
         hashed = hash_password(password)
 
-        # Verificar si el email ya existe
-        cursor.execute("SELECT COUNT(*) FROM VECINOS WHERE EMAIL = %s", (email,))
+        # ⬅️ CAMBIO: Nombre de tabla a minúsculas
+        cursor.execute("SELECT COUNT(*) FROM vecinos WHERE email = %s", (email,))
         if cursor.fetchone()[0] > 0:
             return False, "El email ya está registrado."
 
-        # CAMBIO CRÍTICO: Usamos DEFAULT en lugar de VECINOS_SEQ.NEXTVAL de Oracle
+        # ⬅️ CAMBIO: Nombre de tabla a minúsculas
         sql = """
-        INSERT INTO VECINOS (ID_VECINO, NOMBRE, EMAIL, TELEFONO, PASSWORD_HASH, ROL, ESTADO_APROBACION)
+        INSERT INTO vecinos (id_vecino, nombre, email, telefono, password_hash, rol, estado_aprobacion)
         VALUES (DEFAULT, %s, %s, %s, %s, 'vecino', 'pendiente')
         """
 
@@ -115,7 +112,6 @@ def ejecutar_registro_db(nombre, email, telefono, password):
         return True, "Registro exitoso. Tu cuenta está pendiente de aprobación."
 
     except psycopg2.Error as e:
-        # Manejo más específico de errores de BD (ej. duplicados)
         if "unique constraint" in str(e):
               return False, "Error: El email ya existe (Restricción única violada)."
         return False, f"Error de BD: {e}"
@@ -137,12 +133,13 @@ def obtener_todos_los_vecinos():
 
     try:
         cursor = conn.cursor()
+        # ⬅️ CAMBIO: Nombre de tabla a minúsculas
         cursor.execute("""
-            SELECT ID_VECINO, NOMBRE, EMAIL, ESTADO_APROBACION, TELEFONO
-            FROM VECINOS
-            WHERE LOWER(ROL) != 'admin'
+            SELECT id_vecino, nombre, email, estado_aprobacion, telefono
+            FROM vecinos
+            WHERE LOWER(rol) != 'admin'
             ORDER BY 
-                CASE ESTADO_APROBACION 
+                CASE estado_aprobacion 
                     WHEN 'pendiente' THEN 1 
                     ELSE 2 
                 END
@@ -165,8 +162,9 @@ def actualizar_estado_vecino(id_vecino, estado):
     if not conn:
         return False
     try:
+        # ⬅️ CAMBIO: Nombre de tabla a minúsculas
         cursor = conn.cursor()
-        cursor.execute("UPDATE VECINOS SET ESTADO_APROBACION = %s WHERE ID_VECINO = %s", (estado, id_vecino))
+        cursor.execute("UPDATE vecinos SET estado_aprobacion = %s WHERE id_vecino = %s", (estado, id_vecino))
         conn.commit()
         return cursor.rowcount > 0
     except Exception as e:
@@ -183,8 +181,9 @@ def eliminar_vecino_db(id_vecino):
     if not conn:
         return False
     try:
+        # ⬅️ CAMBIO: Nombre de tabla a minúsculas
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM VECINOS WHERE ID_VECINO = %s", (id_vecino,))
+        cursor.execute("DELETE FROM vecinos WHERE id_vecino = %s", (id_vecino,))
         conn.commit()
         return cursor.rowcount > 0
     except Exception as e:
@@ -205,11 +204,11 @@ def ejecutar_publicacion_db(tipo, id_vecino, datos):
     try:
         cursor = conn.cursor()
 
-        # CAMBIO CRÍTICO: Usamos DEFAULT en lugar de las secuencias de Oracle
         if tipo == "oferta":
+            # ⬅️ CAMBIO: Nombre de tabla a minúsculas
             sql = """
-            INSERT INTO OFERTAS_DE_SERVICIO
-            (ID_OFERTA, ID_VECINO, PROFESION_U_OFICIO, DESCRIPCION_DETALLADA, COSTO_ESTIMADO, TELEFONO_CONTACTO)
+            INSERT INTO ofertas_de_servicio
+            (id_oferta, id_vecino, profesion_u_oficio, descripcion_detallada, costo_estimado, telefono_contacto)
             VALUES (DEFAULT, %s, %s, %s, %s, %s)
             """
             cursor.execute(sql, (
@@ -221,9 +220,10 @@ def ejecutar_publicacion_db(tipo, id_vecino, datos):
             ))
 
         elif tipo == "emprendimiento":
+            # ⬅️ CAMBIO: Nombre de tabla a minúsculas
             sql = """
-                INSERT INTO EMPRENDIMIENTOS 
-                (ID_EMPRENDIMIENTO, ID_VECINO, NOMBRE_EMPRENDIMIENTO, TIPO_PRODUCTO, DESCRIPCION, CONTACTO_EMPRENDIMIENTO) 
+                INSERT INTO emprendimientos 
+                (id_emprendimiento, id_vecino, nombre_emprendimiento, tipo_producto, descripcion, contacto_emprendimiento) 
                 VALUES (DEFAULT, %s, %s, %s, %s, %s)
             """
             
@@ -236,9 +236,10 @@ def ejecutar_publicacion_db(tipo, id_vecino, datos):
             ))
 
         elif tipo == "aviso":
+            # ⬅️ CAMBIO: Nombre de tabla a minúsculas
             sql = """
-            INSERT INTO AVISOS_COMUNITARIOS
-            (ID_AVISO, ID_VECINO, TIPO_AVISO, TITULO, CONTENIDO, TELEFONO_AVISO)
+            INSERT INTO avisos_comunitarios
+            (id_aviso, id_vecino, tipo_aviso, titulo, contenido, telefono_aviso)
             VALUES (DEFAULT, %s, %s, %s, %s, %s)
             """
             cursor.execute(sql, (
@@ -274,32 +275,34 @@ def obtener_publicaciones(tipo, busqueda=""):
         cursor = conn.cursor()
         busqueda_param = f"%{busqueda.lower()}%"
         
-        # PostgreSQL usa ILIKE para búsquedas insensibles a mayúsculas
         if tipo == "oferta":
+            # ⬅️ CAMBIO: Nombre de tabla a minúsculas
             sql = """
-            SELECT T1.ID_OFERTA, T1.PROFESION_U_OFICIO, T1.DESCRIPCION_DETALLADA, T1.COSTO_ESTIMADO, T1.TELEFONO_CONTACTO, T2.NOMBRE
-            FROM OFERTAS_DE_SERVICIO T1
-            JOIN VECINOS T2 ON T1.ID_VECINO = T2.ID_VECINO
-              AND (T1.PROFESION_U_OFICIO ILIKE %s OR T1.DESCRIPCION_DETALLADA ILIKE %s)
-            ORDER BY T1.FECHA_PUBLICACION DESC
+            SELECT T1.id_oferta, T1.profesion_u_oficio, T1.descripcion_detallada, T1.costo_estimado, T1.telefono_contacto, T2.nombre
+            FROM ofertas_de_servicio T1
+            JOIN vecinos T2 ON T1.id_vecino = T2.id_vecino
+              AND (T1.profesion_u_oficio ILIKE %s OR T1.descripcion_detallada ILIKE %s)
+            ORDER BY T1.fecha_publicacion DESC
             """
             cursor.execute(sql, (busqueda_param, busqueda_param))
 
         elif tipo == "emprendimiento":
+            # ⬅️ CAMBIO: Nombre de tabla a minúsculas
             sql = """
-            SELECT T1.ID_EMPRENDIMIENTO, T1.NOMBRE_EMPRENDIMIENTO, T1.TIPO_PRODUCTO, T1.DESCRIPCION, T1.CONTACTO_EMPRENDIMIENTO, T2.NOMBRE
-            FROM EMPRENDIMIENTOS T1
-            JOIN VECINOS T2 ON T1.ID_VECINO = T2.ID_VECINO
-            ORDER BY T1.FECHA_PUBLICACION DESC
+            SELECT T1.id_emprendimiento, T1.nombre_emprendimiento, T1.tipo_producto, T1.descripcion, T1.contacto_emprendimiento, T2.nombre
+            FROM emprendimientos T1
+            JOIN vecinos T2 ON T1.id_vecino = T2.id_vecino
+            ORDER BY T1.fecha_publicacion DESC
             """
             cursor.execute(sql)
 
         elif tipo == "aviso":
+            # ⬅️ CAMBIO: Nombre de tabla a minúsculas
             sql = """
-            SELECT T1.ID_AVISO, T1.TIPO_AVISO, T1.TITULO, T1.CONTENIDO, T1.TELEFONO_AVISO, T2.NOMBRE
-            FROM AVISOS_COMUNITARIOS T1
-            JOIN VECINOS T2 ON T1.ID_VECINO = T2.ID_VECINO
-            ORDER BY T1.FECHA_PUBLICACION DESC
+            SELECT T1.id_aviso, T1.tipo_aviso, T1.titulo, T1.contenido, T1.telefono_aviso, T2.nombre
+            FROM avisos_comunitarios T1
+            JOIN vecinos T2 ON T1.id_vecino = T2.id_vecino
+            ORDER BY T1.fecha_publicacion DESC
             """
             cursor.execute(sql)
             
@@ -325,10 +328,11 @@ def eliminar_publicacion_db(tipo, id_publicacion):
     if not conn:
         return False, "Error de conexión."
     
+    # ⬅️ CAMBIO: Nombres de tabla a minúsculas
     tablas = {
-        "oferta": ("OFERTAS_DE_SERVICIO", "ID_OFERTA"),
-        "emprendimiento": ("EMPRENDIMIENTOS", "ID_EMPRENDIMIENTO"),
-        "aviso": ("AVISOS_COMUNITARIOS", "ID_AVISO")
+        "oferta": ("ofertas_de_servicio", "id_oferta"),
+        "emprendimiento": ("emprendimientos", "id_emprendimiento"),
+        "aviso": ("avisos_comunitarios", "id_aviso")
     }
 
     if tipo not in tablas:
@@ -389,12 +393,11 @@ def login():
         is_admin = request.form.get("is_admin") == "on"
 
         if is_admin:
-            email = "admin@vecinotalento.cl" # Uso del email del administrador
+            email = "admin@vecinotalento.cl"
 
         user = ejecutar_login_db(email, password)
 
         if user:
-            # Si no es admin y no está aprobado, no puede pasar
             if user["rol"] != "admin" and user["estado"] != "aprobado":
                 flash("Tu cuenta aún está pendiente de aprobación por el administrador.", "warning")
                 return redirect(url_for("login"))
@@ -452,10 +455,8 @@ def view_content(tipo):
 
     busqueda = request.form.get("busqueda", "") if tipo == "oferta" and request.method == "POST" else ""
 
-    # La función obtener_publicaciones ahora devuelve el ID en la primera columna
     columnas, resultados = obtener_publicaciones(tipo, busqueda)
     
-    # Prepara las columnas y resultados para la vista de usuario (ocultando el ID)
     if columnas:
         columnas_user = columnas[1:]
         resultados_user = [fila[1:] for fila in resultados]
@@ -580,7 +581,6 @@ def manage_content(tipo):
         "aviso": "Gestión de Avisos Comunitarios"
     }
     
-    # La función obtener_publicaciones devuelve el ID en la primera columna
     columnas, resultados = obtener_publicaciones(tipo)
     
     return render_template(
@@ -602,7 +602,6 @@ def delete_content_action(tipo, id_publicacion):
     
     flash(msg, "success" if ok else "error")
     
-    # Redirigir de vuelta a la página de gestión de contenido
     return redirect(url_for("manage_content", tipo=tipo))
 
 
