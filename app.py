@@ -1,24 +1,46 @@
+import os
 import oracledb
 import hashlib
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 
 
 # =========================================================
-# 1. CONFIGURACIÓN DE CONEXIÓN A ORACLE
+# 1. FLASK APP Y CONFIGURACIÓN DE SEGURIDAD (LEYENDO DE RENDER)
 # =========================================================
-usuario_db = "SIMON_CALFUCURA"
-contrasena_db = "12345"
-dsn_completo = "195.26.252.168:1521/XEPDB1" # Asegúrate de que este DSN sea correcto
+
+app = Flask(__name__)
+# ⚠️ CORRECCIÓN CRÍTICA: La clave secreta ahora se lee de la Variable de Entorno de Render.
+# Si no la encuentra, usa una clave por defecto (lo ideal es que NUNCA use la por defecto en producción).
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "CLAVE_DE_FALLO_GENERADA_POR_CODIGO")
+
+
+# =========================================================
+# 2. CONFIGURACIÓN DE CONEXIÓN A ORACLE (LEYENDO DE RENDER)
+# =========================================================
 
 def conectar_db():
     try:
+        # ⚠️ CORRECCIÓN CRÍTICA: Las credenciales ahora se leen de las Variables de Entorno.
+        usuario_db = os.environ.get("ORACLE_USER")
+        contrasena_db = os.environ.get("ORACLE_PASSWORD")
+        dsn_completo = os.environ.get("ORACLE_DSN")
+
+        # Verificación para evitar errores si las variables no existen
+        if not all([usuario_db, contrasena_db, dsn_completo]):
+            print("Error: Las Variables de Entorno de Oracle (USER, PASSWORD, DSN) no están configuradas en Render.")
+            return None
+
+        # Opcional: Iniciar el cliente de Oracle. Puede ayudar a la instalación en ciertos entornos.
+        # oracledb.init_oracle_client(lib_dir=os.getcwd()) 
+        
         return oracledb.connect(
             user=usuario_db,
             password=contrasena_db,
             dsn=dsn_completo
         )
     except oracledb.DatabaseError as e:
-        print(f"Error al conectar a Oracle: {e}")
+        # Esto imprimirá el error TNS:listener... o el error de credenciales en los logs de Render.
+        print(f"Error al conectar a Oracle: {e}") 
         return None
 
 
@@ -28,7 +50,7 @@ def hash_password(password):
 
 
 # =========================================================
-# 2. FUNCIONES DE BASE DE DATOS (CORRECCIONES INTEGRADAS)
+# 3. FUNCIONES DE BASE DE DATOS (SIN CAMBIOS)
 # =========================================================
 
 # --- LOGIN ---
@@ -102,7 +124,7 @@ def ejecutar_registro_db(nombre, email, telefono, password):
 
     except oracledb.DatabaseError as e:
         if "ORA-00001" in str(e):
-             return False, "Error: El email o ID ya existe (Restricción única violada)."
+              return False, "Error: El email o ID ya existe (Restricción única violada)."
         return False, f"Error de BD: {e}"
 
     except Exception as e:
@@ -181,7 +203,7 @@ def eliminar_vecino_db(id_vecino):
             conn.close()
 
 
-# --- PUBLICACIONES (CON TODAS LAS CORRECCIONES INTEGRADAS) ---
+# --- PUBLICACIONES ---
 def ejecutar_publicacion_db(tipo, id_vecino, datos):
     conn = conectar_db()
     if not conn:
@@ -191,7 +213,6 @@ def ejecutar_publicacion_db(tipo, id_vecino, datos):
         cursor = conn.cursor()
 
         if tipo == "oferta":
-            # 1. Sin ESTADO_APROBACION. 2. Bind variables seguros (:v_desc, etc.)
             sql = """
             INSERT INTO OFERTAS_DE_SERVICIO
             (ID_OFERTA, ID_VECINO, PROFESION_U_OFICIO, DESCRIPCION_DETALLADA, COSTO_ESTIMADO, TELEFONO_CONTACTO)
@@ -206,7 +227,6 @@ def ejecutar_publicacion_db(tipo, id_vecino, datos):
             )
 
         elif tipo == "emprendimiento":
-            # 1. Sin ESTADO_APROBACION. 2. Columna "DESCRIPCION" entre comillas. 3. Bind variables seguros.
             sql = (
                 "INSERT INTO EMPRENDIMIENTOS "
                 "(ID_EMPRENDIMIENTO, ID_VECINO, NOMBRE_EMPRENDIMIENTO, TIPO_PRODUCTO, \"DESCRIPCION\", CONTACTO_EMPRENDIMIENTO) "
@@ -222,7 +242,6 @@ def ejecutar_publicacion_db(tipo, id_vecino, datos):
             )
 
         elif tipo == "aviso":
-            # 1. Sin ESTADO_APROBACION. 2. Columna "CONTENIDO" entre comillas. 3. Bind variables seguros.
             sql = """
             INSERT INTO AVISOS_COMUNITARIOS
             (ID_AVISO, ID_VECINO, TIPO_AVISO, TITULO, "CONTENIDO", TELEFONO_AVISO)
@@ -243,7 +262,7 @@ def ejecutar_publicacion_db(tipo, id_vecino, datos):
 
     except Exception as e:
         conn.rollback()
-        print(f"ERROR AL INTENTAR PUBLICAR: {e}") 
+        print(f"ERROR AL INTENTAR PUBLICAR: {e}")  
         return False, f"Error al publicar: {e}"
 
     finally:
@@ -251,7 +270,7 @@ def ejecutar_publicacion_db(tipo, id_vecino, datos):
             conn.close()
 
 
-# --- PUBLICACIONES (Actualizada para incluir ID en Admin y sin ESTADO_APROBACION en el WHERE) ---
+# --- PUBLICACIONES (Actualizada para incluir ID en Admin) ---
 def obtener_publicaciones(tipo, busqueda=""):
     conn = conectar_db()
     if not conn:
@@ -339,7 +358,7 @@ def eliminar_publicacion_db(tipo, id_publicacion):
             
     except Exception as e:
         conn.rollback()
-        print(f"ERROR AL ELIMINAR PUBLICACIÓN: {e}") 
+        print(f"ERROR AL ELIMINAR PUBLICACIÓN: {e}")  
         return False, f"Error de BD: {e}"
         
     finally:
@@ -348,12 +367,8 @@ def eliminar_publicacion_db(tipo, id_publicacion):
 
 
 # =========================================================
-# 3. FLASK ROUTES
+# 4. FLASK ROUTES (SIN CAMBIOS)
 # =========================================================
-
-app = Flask(__name__)
-app.secret_key = "clave_super_secreta_a_cambiar"
-
 
 @app.route("/")
 def index():
@@ -600,4 +615,5 @@ def delete_content_action(tipo, id_publicacion):
 # EJECUTAR APP
 # =========================================================
 if __name__ == "__main__":
+    # Nota: Render NO usa app.run(debug=True). Lo hace gunicorn.
     app.run(debug=True)
